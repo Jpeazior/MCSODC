@@ -1,8 +1,5 @@
 package com.atom.MultithreadedCocurrentSimulationOfDistributedComputing;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.LineNumberReader;
 import java.util.concurrent.BrokenBarrierException;
@@ -12,10 +9,11 @@ import java.util.concurrent.CyclicBarrier;
 /*
  * 使用线程来模拟分布式计算中的各个工作子机的子任务.
  * 
- * @param sourceFile 			线程共享变量之唯一的文件实例，由用户设值注入
- * @param cyclicBarrier 		线程共享变量之唯一的循环栅栏实例，用于模拟处理分布式计算逻辑
- * @param linNumber 			线程共享变量之已读取到 的文件行，每次线程向下读时都从这一文件行开始
- * @param firstTempResultSet 	线程私有变量之第一步临时结果集，将保存当前线程统计的单词计数
+ * @param intermediateResultSet 		线程共享变量之中间结果集，将保存10条线程处理后的初步结果集
+ * @param lineNumberReader 				线程共享变量之唯一的按行读取器，由用户注入
+ * @param cyclicBarrier 				线程共享变量之唯一的循环栅栏实例，用于模拟处理分布式计算逻辑
+ * @param linNumber 					线程共享变量之已读取到 的文件行，每次线程向下读时都从这一文件行开始
+ * @param firstTempResultSet 			线程私有变量之第一步临时结果集，将保存当前线程统计的单词计数
  * 
  * 模拟分布式计算中工作子机的工作
  * 在WordCount这一示例中，各个分布式子机将源数据划分为数个小块并分别计算
@@ -25,24 +23,24 @@ import java.util.concurrent.CyclicBarrier;
  */
 	 
 public class SimulateDistributedWorkerTask implements Runnable{
-	private File sourceFile;
+	private final ConcurrentHashMap<String, ConcurrentHashMap<String, Integer>> intermediateResultSet;
+	private final LineNumberReader lineNumberReader;
 	private final CyclicBarrier cyclicBarrier;
 	private Integer lineNumber;
 	private ConcurrentHashMap<String, Integer> firstTempResultSet;
 	
+	
 	private final static int ONE = 1;
 	
-	public SimulateDistributedWorkerTask(File sourceFile, CyclicBarrier cyclicBarrier) {
-		this.sourceFile = sourceFile;
+	public SimulateDistributedWorkerTask(LineNumberReader lineNumberReader, CyclicBarrier cyclicBarrier,
+			ConcurrentHashMap<String, ConcurrentHashMap<String, Integer>> intermediateResultSet) {
+		this.lineNumberReader = lineNumberReader;
 		this.cyclicBarrier = cyclicBarrier;
+		this.intermediateResultSet = intermediateResultSet;
 	}
 	
-	public File getSourceFile() {
-		return sourceFile;
-	}
-
-	public void setSourceFile(File sourceFile) {
-		this.sourceFile = sourceFile;
+	public LineNumberReader getLineNumberReader() {
+		return lineNumberReader;
 	}
 
 	public Integer getLineNumber() {
@@ -66,29 +64,22 @@ public class SimulateDistributedWorkerTask implements Runnable{
 	}
 
 
-
+	/**
+	 * 执行子线程任务处理逻辑
+	 */
 	@Override
-	public void run() {	
-		//以注入的文件实例创建LineNumberReader，该Reader将从指定行号开始读取数据
-		LineNumberReader reader = null;
-		try {
-			reader = new LineNumberReader(new FileReader(sourceFile));
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		}
-		
+	public void run() {			
 		try {
 			//等待所有线程（*10）准备完毕
 			cyclicBarrier.await();
 			//设置读取次数
 			int runTime = 0;
-			//执行循环，读取10行数据之后被栅栏，等待其他线程完成任务
+			//执行循环，读取10行数据（即10个单词）之后被栅栏，等待其他线程完成任务
 			while (runTime < 10) {
 				//当前已读取到的行数
 				int concurrentLineNumner;
 				String word = null;
 				boolean wordIsNull = "".equals(word) || word == null;
-				boolean wordNotExisted = true;
 				
 				while (wordIsNull) {
 					synchronized(lineNumber){
@@ -96,28 +87,30 @@ public class SimulateDistributedWorkerTask implements Runnable{
 						//获取到当前已读取的行数以后立刻更新
 						lineNumber ++;			
 					}
-					reader.setLineNumber(concurrentLineNumner);
+					lineNumberReader.setLineNumber(concurrentLineNumner);
 					try {
-						word = reader.readLine();
+						word = lineNumberReader.readLine();
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
 				}
 				
-				for (String keySet: firstTempResultSet.keySet()) {
-					if (word.equals(keySet)) {
-						int count = firstTempResultSet.get(keySet);
-						count ++;
-						firstTempResultSet.put(keySet, count);
-						wordNotExisted = false;
-					}
-				}
+				//执行处理逻辑，每次读取一个单词，在初步结果集中查找是否已经存在
+				//如果已经存在，则更新此单词计数
+				//如果不存在，就新建一组键值对将单词计数设为1
 				
-				if (wordNotExisted) 
+				if(firstTempResultSet.containsKey(word)) {
+					int count = firstTempResultSet.get(word);
+					count ++;
+					firstTempResultSet.put(word, count);
+				} else {
 					firstTempResultSet.put(word, ONE);
-				
+				}
+				//完成当前单词的计数处理，执行数加1
 				runTime ++;
 			}
+			//将此线程处理完成的初步结果集置入中间结果集中
+			intermediateResultSet.put(Thread.currentThread().toString(), firstTempResultSet);
 			//等待所有线程（*10）完成任务
 			cyclicBarrier.await();
 		}catch (InterruptedException | BrokenBarrierException e) {
