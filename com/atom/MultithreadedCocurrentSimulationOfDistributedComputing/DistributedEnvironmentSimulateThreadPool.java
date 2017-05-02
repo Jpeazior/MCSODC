@@ -8,6 +8,8 @@ import java.util.concurrent.TimeUnit;
 
 /*
  * 使用自定义线程池来模拟分布式计算中的计算机资源池。
+ * 此线程池重写了一些函数以展示工作流程
+ * 包括：添加了线程创建时、任务执行前、任务执行后、线程池退出时、出现异常时的输出
  */
 public class DistributedEnvironmentSimulateThreadPool {
 	
@@ -33,7 +35,6 @@ public class DistributedEnvironmentSimulateThreadPool {
 
 		@Override
 		public void execute(Runnable command) {
-			// TODO Auto-generated method stub
 			super.execute(warp(command, clientTrace(), Thread.currentThread().getName()));
 		}
 
