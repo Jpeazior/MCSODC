@@ -33,7 +33,6 @@ public class DistributedEnvironmentSimulateThreadPool {
 
 		@Override
 		public void execute(Runnable command) {
-			// TODO Auto-generated method stub
 			super.execute(warp(command, clientTrace(), Thread.currentThread().getName()));
 		}
 

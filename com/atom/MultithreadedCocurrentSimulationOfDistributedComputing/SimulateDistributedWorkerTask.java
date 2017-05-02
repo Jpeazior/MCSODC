@@ -1,8 +1,5 @@
 package com.atom.MultithreadedCocurrentSimulationOfDistributedComputing;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.LineNumberReader;
 import java.util.concurrent.BrokenBarrierException;
@@ -12,7 +9,7 @@ import java.util.concurrent.CyclicBarrier;
 /*
  * 使用线程来模拟分布式计算中的各个工作子机的子任务.
  * 
- * @param sourceFile 			线程共享变量之唯一的文件实例，由用户设值注入
+ * @param lineNumberReader 		线程共享变量之唯一的按行读取器，由用户注入
  * @param cyclicBarrier 		线程共享变量之唯一的循环栅栏实例，用于模拟处理分布式计算逻辑
  * @param linNumber 			线程共享变量之已读取到 的文件行，每次线程向下读时都从这一文件行开始
  * @param firstTempResultSet 	线程私有变量之第一步临时结果集，将保存当前线程统计的单词计数
@@ -25,24 +22,25 @@ import java.util.concurrent.CyclicBarrier;
  */
 	 
 public class SimulateDistributedWorkerTask implements Runnable{
-	private File sourceFile;
+	private LineNumberReader lineNumberReader;
 	private final CyclicBarrier cyclicBarrier;
 	private Integer lineNumber;
 	private ConcurrentHashMap<String, Integer> firstTempResultSet;
 	
+	
 	private final static int ONE = 1;
 	
-	public SimulateDistributedWorkerTask(File sourceFile, CyclicBarrier cyclicBarrier) {
-		this.sourceFile = sourceFile;
+	public SimulateDistributedWorkerTask(LineNumberReader lineNumberReader, CyclicBarrier cyclicBarrier) {
+		this.lineNumberReader = lineNumberReader;
 		this.cyclicBarrier = cyclicBarrier;
 	}
 	
-	public File getSourceFile() {
-		return sourceFile;
+	public LineNumberReader getLineNumberReader() {
+		return lineNumberReader;
 	}
 
-	public void setSourceFile(File sourceFile) {
-		this.sourceFile = sourceFile;
+	public void setLineNumberReader(LineNumberReader lineNumberReader) {
+		this.lineNumberReader = lineNumberReader;
 	}
 
 	public Integer getLineNumber() {
@@ -68,15 +66,7 @@ public class SimulateDistributedWorkerTask implements Runnable{
 
 
 	@Override
-	public void run() {	
-		//以注入的文件实例创建LineNumberReader，该Reader将从指定行号开始读取数据
-		LineNumberReader reader = null;
-		try {
-			reader = new LineNumberReader(new FileReader(sourceFile));
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		}
-		
+	public void run() {			
 		try {
 			//等待所有线程（*10）准备完毕
 			cyclicBarrier.await();
@@ -96,9 +86,9 @@ public class SimulateDistributedWorkerTask implements Runnable{
 						//获取到当前已读取的行数以后立刻更新
 						lineNumber ++;			
 					}
-					reader.setLineNumber(concurrentLineNumner);
+					lineNumberReader.setLineNumber(concurrentLineNumner);
 					try {
-						word = reader.readLine();
+						word = lineNumberReader.readLine();
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
