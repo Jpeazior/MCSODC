@@ -12,12 +12,11 @@ import java.util.concurrent.CyclicBarrier;
 /*
  * 使用线程来模拟分布式计算中的各个工作子机的子任务.
  * 
- * @param sourceFile 				线程共享变量之唯一的文件实例，由用户设值注入
+ * @param sourceFile 			线程共享变量之唯一的文件实例，由用户设值注入
  * @param cyclicBarrier 		线程共享变量之唯一的循环栅栏实例，用于模拟处理分布式计算逻辑
  * @param linNumber 			线程共享变量之已读取到 的文件行，每次线程向下读时都从这一文件行开始
  * @param firstTempResultSet 	线程私有变量之第一步临时结果集，将保存当前线程统计的单词计数
  * 
- * @see java.lang.Runnable#run()
  * 模拟分布式计算中工作子机的工作
  * 在WordCount这一示例中，各个分布式子机将源数据划分为数个小块并分别计算
  * 在此将每次从文件中读取十个单词（即十行），以每十个单词为一小块来模拟分布式计算中的分区函数
