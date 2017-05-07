@@ -5,6 +5,7 @@ import java.io.LineNumberReader;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /*
  * 使用线程来模拟分布式计算中的各个工作子机的子任务.
@@ -26,15 +27,19 @@ public class SimulateDistributedWorkerTask implements Runnable{
 	private final ConcurrentHashMap<String, ConcurrentHashMap<String, Integer>> intermediateResultSet;
 	private final LineNumberReader lineNumberReader;
 	private final CyclicBarrier cyclicBarrier;
-	private Integer lineNumber;
+	private volatile AtomicInteger lineNumber;
 	private ConcurrentHashMap<String, Integer> firstTempResultSet;
 	
 	
 	private final static int ONE = 1;
 	
-	public SimulateDistributedWorkerTask(LineNumberReader lineNumberReader, CyclicBarrier cyclicBarrier,
+	public SimulateDistributedWorkerTask(LineNumberReader lineNumberReader,
+			AtomicInteger lineNumber,
+			CyclicBarrier cyclicBarrier,
 			ConcurrentHashMap<String, ConcurrentHashMap<String, Integer>> intermediateResultSet) {
+		
 		this.lineNumberReader = lineNumberReader;
+		this.lineNumber = lineNumber;
 		this.cyclicBarrier = cyclicBarrier;
 		this.intermediateResultSet = intermediateResultSet;
 	}
@@ -43,20 +48,12 @@ public class SimulateDistributedWorkerTask implements Runnable{
 		return lineNumberReader;
 	}
 
-	public Integer getLineNumber() {
+	public AtomicInteger getLineNumber() {
 		return lineNumber;
-	}
-
-	public void setLineNumber(Integer lineNumber) {
-		this.lineNumber = lineNumber;
 	}
 
 	public ConcurrentHashMap<String, Integer> getFirstTempResultSet() {
 		return firstTempResultSet;
-	}
-
-	public void setFirstTempResultSet(ConcurrentHashMap<String, Integer> firstTempResultSet) {
-		this.firstTempResultSet = firstTempResultSet;
 	}
 
 	public CyclicBarrier getCyclicBarrier() {
@@ -74,6 +71,7 @@ public class SimulateDistributedWorkerTask implements Runnable{
 			cyclicBarrier.await();
 			//设置读取次数
 			int runTime = 0;
+			firstTempResultSet = new ConcurrentHashMap<String, Integer>();
 			//执行循环，读取10行数据（即10个单词）之后被栅栏，等待其他线程完成任务
 			while (runTime < 10) {
 				//当前已读取到的行数
@@ -81,19 +79,23 @@ public class SimulateDistributedWorkerTask implements Runnable{
 				String word = null;
 				boolean wordIsNull = "".equals(word) || word == null;
 				
-				while (wordIsNull) {
-					synchronized(lineNumber){
+				do{
+					/*synchronized(lineNumber){
+						lineNumber = lineNumberReader.getLineNumber();
 						concurrentLineNumner = lineNumber;
 						//获取到当前已读取的行数以后立刻更新
 						lineNumber ++;			
-					}
+					}*/
+					
+					concurrentLineNumner = lineNumber.getAndIncrement();					
+				
 					lineNumberReader.setLineNumber(concurrentLineNumner);
 					try {
 						word = lineNumberReader.readLine();
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
-				}
+				} while (!wordIsNull);
 				
 				//执行处理逻辑，每次读取一个单词，在初步结果集中查找是否已经存在
 				//如果已经存在，则更新此单词计数

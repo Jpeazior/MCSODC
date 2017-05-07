@@ -4,6 +4,7 @@ import java.io.LineNumberReader;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 
@@ -22,6 +23,7 @@ import java.util.concurrent.ExecutorService;
  */
 public class Test {
 	private final static int THREAD_NUMBER = 10;
+	private volatile static AtomicInteger lineNumber;
 	private final static String FILE_ADDRESS = "G:\\MCSODC\\wordCountTest.txt";
 	private static ConcurrentHashMap<String, ConcurrentHashMap<String, Integer>> intermediateResultSet = new ConcurrentHashMap<String, ConcurrentHashMap<String, Integer>>();
 	private static ConcurrentHashMap<String, Integer> finalResultSet = new ConcurrentHashMap<String, Integer>();
@@ -37,6 +39,7 @@ public class Test {
 		ReaderFactory.setFileAddress(FILE_ADDRESS);
 		//取得唯一的行文件读取器
 		lineNumberReader = ReaderFactory.getLineNumberReader();
+		lineNumber = new AtomicInteger(lineNumberReader.getLineNumber());
 		readyToWork = false;
 		//新建循环栅栏，传入数据集，包括中间数据集和最终数据集
 		cyclicBarrier = new CyclicBarrier(THREAD_NUMBER,
@@ -44,7 +47,7 @@ public class Test {
 		//单词计数开始运行，添加10条子线程
 		for (int i = 0; i < THREAD_NUMBER; i ++) {
 			distributedEnvironmentSimulateThreadPool.execute(
-					new SimulateDistributedWorkerTask(lineNumberReader, cyclicBarrier, intermediateResultSet)
+					new SimulateDistributedWorkerTask(lineNumberReader, lineNumber, cyclicBarrier, intermediateResultSet)
 					);
 		}
 		while (finalResultSet.keys().hasMoreElements()) {

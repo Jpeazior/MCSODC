@@ -1,5 +1,9 @@
 package com.atom.MultithreadedCocurrentSimulationOfDistributedComputing;
 
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 /*
@@ -34,11 +38,20 @@ public class DistributedResultHandleSimulateBarrierRun implements Runnable{
 		//10条线程的工作是否结束在线程中判断
 		if (readyToWork) {
 			//遍历中间结果集的值集合，即初步结果集
-			for (ConcurrentHashMap<String, Integer> firstStepResultSet : intermediateResultSet.values()) {
+			for (Iterator<Entry<String, ConcurrentHashMap<String, Integer>>> intermediateResultSetIterator
+					= intermediateResultSet.entrySet().iterator(); intermediateResultSetIterator.hasNext();) {
+				
+				Entry<String, ConcurrentHashMap<String, Integer>> element = intermediateResultSetIterator.next(); 
+				String threadName = element.getKey();
+				ConcurrentHashMap<String, Integer> firstStepResultSet = element.getValue();
+
 				//取得初步结果集的键集合
-				System.out.println("开始合并线程：【" + intermediateResultSet.keys().nextElement() + "】 的初步结果集。" );
-				while (firstStepResultSet.keys().hasMoreElements()) {
-					String word = firstStepResultSet.keys().nextElement();
+				System.out.println("开始合并线程：【" + threadName + "】 的初步结果集。" );
+				
+				Collection<String> keys = firstStepResultSet.keySet();
+				for (Iterator<String> keysIterator = keys.iterator(); keysIterator.hasNext();) {
+					String word = keysIterator.next();
+					
 					//判断最终结果集中是否已经统计了此单词
 					//如果统计了，就更新此单词的计数
 					//如果没有统计，就新增一对键值对用以统计此单词
@@ -51,11 +64,28 @@ public class DistributedResultHandleSimulateBarrierRun implements Runnable{
 						finalResultSet.put(word, firstStepResultSet.get(word));
 					}
 				}
+				  
+				/*while (firstStepResultSet.keys().hasMoreElements()) {
+					String word = firstStepResultSet.keys().nextElement();
+					//判断最终结果集中是否已经统计了此单词
+					//如果统计了，就更新此单词的计数
+					//如果没有统计，就新增一对键值对用以统计此单词
+					if (finalResultSet.containsKey(word)) {
+						int wordCount = finalResultSet.get(word);
+						wordCount += firstStepResultSet.get(word);
+						finalResultSet.put(word, wordCount);					
+					}
+					else {
+						finalResultSet.put(word, firstStepResultSet.get(word));
+					}
+				}*/
+				System.out.println("线程：【" + threadName + "】 的初步结果集合并完成！" );
 			}
 			//每轮10条线程的中间结果集处理完毕，重置中间结果集和标记位，以便下一次循环栅栏的工作
 			intermediateResultSet.clear();
 			readyToWork = false;
-			System.out.println("线程：【" + intermediateResultSet.keys().nextElement() + "】 的初步结果集合并完成！" );
+
+			
 		}else {
 			System.out.println("10台工作子机准备完毕！");
 			readyToWork = true;
