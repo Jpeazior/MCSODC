@@ -33,10 +33,12 @@ public class DistributedEnvironmentSimulateThreadPool {
 			);
 		}
 
+		/*
 		@Override
 		public void execute(Runnable command) {
 			super.execute(warp(command, clientTrace(), Thread.currentThread().getName()));
 		}
+		*/
 
 		@Override
 		protected void beforeExecute(Thread t, Runnable r) {
@@ -53,6 +55,7 @@ public class DistributedEnvironmentSimulateThreadPool {
 			System.out.println("Ïß³Ì³ØÍË³ö¡£");
 		}
 		
+		/*
 		private Exception clientTrace() {
 			return new Exception("Client stack trace");
 		}
@@ -69,6 +72,6 @@ public class DistributedEnvironmentSimulateThreadPool {
 					}
 				}
 			};
-		}
+		}*/
 	}
 }
